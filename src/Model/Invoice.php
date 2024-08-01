@@ -2,16 +2,17 @@
 
 namespace SilverCommerce\OrdersAdmin\Model;
 
-use SilverStripe\Security\PermissionProvider;
-use SilverStripe\Security\Member;
-use SilverStripe\Security\Permission;
-use SilverStripe\Control\Controller;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\Forms\FieldList;
-use SilverStripe\Forms\DropdownField;
-use SilverStripe\SiteConfig\SiteConfig;
-use SilverCommerce\OrdersAdmin\Control\DisplayController;
 use SilverStripe\Forms\TextField;
+use SilverStripe\Security\Member;
 use SilverStripe\Security\Security;
+use SilverStripe\Control\Controller;
+use SilverStripe\Forms\DropdownField;
+use SilverStripe\Security\Permission;
+use SilverStripe\SiteConfig\SiteConfig;
+use SilverStripe\Security\PermissionProvider;
+use SilverCommerce\OrdersAdmin\Control\DisplayController;
 
 /**
  * Order objects track all the details of an order and if they were completed or
@@ -472,36 +473,6 @@ class Invoice extends Estimate implements PermissionProvider
         $this->Status = $this->config()->get("collected_status");
         return $this;
     }
-    
-    /**
-     * @depreciated This method is depreciated
-     *
-     * @return string
-     */
-    protected function get_prefix()
-    {
-        return $this->getPrefix();
-    }
-    
-    /**
-     * Retrieve an order prefix from siteconfig
-     * for an Invoice
-     *
-     * @return string
-     */
-    protected function getPrefix(): string
-    {
-        $prefix = $this
-            ->dbObject('Prefix')
-            ->getValue();
-
-        if (!empty($prefix)) {
-            return (string)$prefix;
-        }
-
-        $config = SiteConfig::current_site_config();
-        return (string)$config->InvoiceNumberPrefix;
-    }
 
     /**
      * API Callback after this object is written to the DB
@@ -670,5 +641,33 @@ class Invoice extends Estimate implements PermissionProvider
         }
 
         return false;
+    }
+
+    /**
+     * -------------------------------------------------------
+     * Legacy methods to be removed
+     * -------------------------------------------------------
+     */
+
+    protected function get_prefix()
+    {
+        Deprecation::notice('2.0', 'getPrefix is replaced by OrderFactory::findBestPrefix()');
+        return $this->getPrefix();
+    }
+
+    protected function getPrefix(): string
+    {
+        Deprecation::notice('2.0', 'getPrefix is replaced by OrderFactory::findBestPrefix()');
+
+        $prefix = $this
+            ->dbObject('Prefix')
+            ->getValue();
+
+        if (!empty($prefix)) {
+            return (string)$prefix;
+        }
+
+        $config = SiteConfig::current_site_config();
+        return (string)$config->InvoiceNumberPrefix;
     }
 }

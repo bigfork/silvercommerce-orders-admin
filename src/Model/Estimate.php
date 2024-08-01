@@ -41,11 +41,13 @@ use SilverCommerce\OrdersAdmin\Control\DisplayController;
 use SilverCommerce\OrdersAdmin\Search\OrderSearchContext;
 use SilverCommerce\OrdersAdmin\Tasks\OrdersMigrationTask;
 use SilverCommerce\OrdersAdmin\Compat\NumberMigrationTask;
+use SilverCommerce\OrdersAdmin\Factory\OrderFactory;
 use Symbiote\GridFieldExtensions\GridFieldEditableColumns;
 use SilverCommerce\OrdersAdmin\Forms\GridField\AddLineItem;
 use SilverCommerce\OrdersAdmin\Forms\GridField\LineItemEditableColumns;
 use SilverCommerce\OrdersAdmin\Forms\GridField\ReadOnlyGridField;
 use SilverCommerce\VersionHistoryField\Forms\VersionHistoryField;
+use SilverStripe\Dev\Deprecation;
 use SilverStripe\Security\Security;
 use SilverStripe\Versioned\RestoreAction;
 
@@ -662,37 +664,14 @@ class Estimate extends DataObject implements Orderable, PermissionProvider
         return (float)$total;
     }
 
-    /**
-     * Factory method to convert this estimate to an
-     * order.
-     *
-     * This method writes and reloads the object so
-     * we are now working with the new object type
-     *
-     * If the current object is already a type of
-     * invoice, we just return the current object
-     * with no further action
-     *
-     * @return Invoice
-     */
     public function convertToInvoice()
     {
         if ($this instanceof Invoice) {
             return $this;
         }
 
-        $id = $this->ID;
-        $this->ClassName = Invoice::class;
-        $this->write();
-
-        // Get our new Invoice
-        // and re-generate numbers
-        $record = Invoice::get()->byID($id);
-        $record->Ref = $this->generateOrderNumber();
-        $record->Prefix = $this->getPrefix();
-        $record->StartDate = null;
-        $record->EndDate = null;
-        $record->write();
+        $factory = OrderFactory::create(false, $this->ID);
+        $record = $factory->convertEstimateToInvoice();
 
         return $record;
     }
@@ -919,154 +898,6 @@ class Estimate extends DataObject implements Orderable, PermissionProvider
     }
 
     /**
-     * @depreciated Use getPrefix instead
-     *
-     * @return string
-     */
-    protected function get_prefix()
-    {
-        return $this->getPrefix();
-    }
-
-    /**
-     * Retrieve an order prefix from siteconfig
-     * for an Estimate
-     *
-     * @return string
-     */
-    protected function getPrefix(): string
-    {
-        $prefix = $this
-            ->dbObject('Prefix')
-            ->getValue();
-
-        if (!empty($prefix)) {
-            return (string)$prefix;
-        }
-
-        $config = SiteConfig::current_site_config();
-        return (string)$config->EstimateNumberPrefix;
-    }
-
-    /**
-     * Get a base ID for the last Estimate in the DataBase
-     *
-     * @return int
-     */
-    protected function getBaseNumber()
-    {
-        $base = 0;
-        $prefix = $this->getPrefix();
-        $classname = $this->ClassName;
-
-        // Get the last instance of the current class
-        $last = $classname::get()
-            ->filter("ClassName", $classname)
-            ->sort("Ref", "DESC")
-            ->first();
-
-        // If we have a last estimate/invoice, get the ID of the last invoice
-        // so we can increment
-        if (isset($last)) {
-            $base = str_replace($prefix, "", $last->Ref);
-            $base = (int)str_replace("-", "", $base);
-        }
-
-        // Increment base
-        $base++;
-
-        return $base;
-    }
-
-    /**
-     * legacy method name - soon to be depreciated
-     *
-     */
-    protected function generate_order_number()
-    {
-        return $this->generateOrderNumber();
-    }
-
-    /**
-     * Generate an incremental estimate / invoice number.
-     *
-     * We then add an order prefix (if one is set).
-     *
-     * @return string
-     */
-    protected function generateOrderNumber()
-    {
-        $base_number = $this->getBaseNumber();
-
-        while (!$this->validOrderNumber($base_number)) {
-            $base_number++;
-        }
-
-        return $base_number;
-    }
-
-
-    /**
-     * legacy method name - soon to be depreciated
-     *
-     */
-    protected function generate_random_string($length = 20)
-    {
-        return $this->generateRandomString($length);
-    }
-
-    /**
-     * Generate a random string for use in estimate numbering
-     *
-     * @return string
-     */
-    protected function generateRandomString($length = 20): string
-    {
-        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $randomString = '';
-
-        for ($i = 0; $i < $length; $i++) {
-            $randomString .= $characters[rand(0, strlen($characters) - 1)];
-        }
-
-        return $randomString;
-    }
-
-    /**
-     * Check if the currently generated order number
-     * is valid (not duplicated)
-     *
-     * @return boolean
-     */
-    protected function validOrderNumber($number = null)
-    {
-        $number = (isset($number)) ? $number : $this->Ref;
-
-        $existing = Estimate::get()
-            ->filter([
-                "ClassName" => self::class,
-                "Ref" => $number
-            ])->first();
-
-        return !($existing);
-    }
-
-    /**
-     * Check if the access key generated for this estimate is
-     * valid (exists on another object)
-     *
-     * @return boolean
-     */
-    protected function validAccessKey()
-    {
-        $existing = Estimate::get()
-            ->filter("AccessKey", $this->AccessKey)
-            ->first();
-        
-        return !($existing);
-    }
-
-    /**
      * Create a duplicate of this order/estimate as well as duplicating
      * associated items
      *
@@ -1120,16 +951,18 @@ class Estimate extends DataObject implements Orderable, PermissionProvider
 
         // Ensure that this object has a non-conflicting Access Key
         if (!$this->AccessKey) {
-            $this->AccessKey = $this->generateRandomString(40);
-            
-            while (!$this->validAccessKey()) {
-                $this->AccessKey = $this->generateRandomString(40);
+            $key = OrderFactory::generateRandomString(40);
+
+            while (!OrderFactory::validAccessKey($key)) {
+                $key = OrderFactory::generateRandomString(40);
             }
+
+            $this->AccessKey = $key;
         }
 
         // Set a prefix if required
         if (!$this->Prefix) {
-            $this->Prefix = $this->getPrefix();
+            $this->Prefix = OrderFactory::findBestPrefix($this);
         }
 
         $contact = $this->Customer();
@@ -1150,7 +983,6 @@ class Estimate extends DataObject implements Orderable, PermissionProvider
                 $this->$param = $location->$param;
             }
         }
-
 
         // Is delivery address set, if not, set it here
         if (!$this->DeliveryAddress && $this->BillingAddress) {
@@ -1186,7 +1018,8 @@ class Estimate extends DataObject implements Orderable, PermissionProvider
 
         // Check if an order number has been generated, if not, add it and save again
         if (!$this->Ref) {
-            $this->Ref = $this->generateOrderNumber();
+            $factory = OrderFactory::create(false, $this->ID);
+            $this->Ref = $factory->calculateNextRef();
             $this->write();
         }
     }
@@ -1295,5 +1128,104 @@ class Estimate extends DataObject implements Orderable, PermissionProvider
         }
 
         return false;
+    }
+
+    /** 
+     * ---------------------------------------------------------------------
+     * LEGACY METHODS (TO BE REMOVED IN LATER VERSIONS)
+     * ---------------------------------------------------------------
+     */
+
+    protected function generateOrderNumber()
+    {
+        Deprecation::notice('2.0', 'generateOrderNumber is replaced by OrderFactory::generateOrderNumber()');
+        $base_number = $this->getBaseNumber();
+
+        while (!OrderFactory::validOrderNumber($base_number, self::class)) {
+            $base_number++;
+        }
+
+        return $base_number;
+    }
+
+    protected function get_prefix()
+    {
+        Deprecation::notice('2.0', 'get_prefix is replaced by OrderFactory::findBestPrefix()');
+        return $this->getPrefix();
+    }
+
+    protected function getPrefix(): string
+    {
+        Deprecation::notice('2.0', 'getPrefix is replaced by OrderFactory::findBestPrefix()');
+
+        $prefix = $this
+            ->dbObject('Prefix')
+            ->getValue();
+
+        if (!empty($prefix)) {
+            return (string)$prefix;
+        }
+
+        return OrderFactory::findBestPrefix($this);
+    }
+
+    protected function getBaseNumber()
+    {
+        Deprecation::notice('2.0', 'getBaseNumber is replaced by OrderFactory::findLastRef()');
+        $base = 0;
+        $prefix = $this->getPrefix();
+        $classname = $this->ClassName;
+
+        // Get the last instance of the current class
+        $last = $classname::get()
+            ->filter("ClassName", $classname)
+            ->sort("Ref", "DESC")
+            ->first();
+
+        // If we have a last estimate/invoice, get the ID of the last invoice
+        // so we can increment
+        if (isset($last)) {
+            $base = str_replace($prefix, "", $last->Ref);
+            $base = (int)str_replace("-", "", $base);
+        }
+
+        // Increment base
+        $base++;
+
+        return $base;
+    }
+
+    protected function generate_order_number()
+    {
+        Deprecation::notice('2.0', 'generate_random_string is depretiated, use OrderFactory instead');
+        return $this->generateOrderNumber();
+    }
+
+    protected function generate_random_string($length = 20)
+    {
+        Deprecation::notice('2.0', 'generate_random_string is depretiated, use OrderFactory instead');
+        return $this->generateRandomString($length);
+    }
+
+    protected function generateRandomString($length = 20): string
+    {
+        Deprecation::notice('2.0', 'generateRandomString is depretiated, use OrderFactory instead');
+
+        $string = OrderFactory::generateRandomString($length);
+        return $string;
+    }
+
+    protected function validOrderNumber($number = null)
+    {
+        Deprecation::notice('2.0', 'validOrderNumber is depretiated, use OrderFactory instead');
+        $number = (isset($number)) ? $number : $this->Ref;
+
+        return OrderFactory::validOrderNumber($number, self::class);
+    }
+
+    protected function validAccessKey()
+    {
+        Deprecation::notice('2.0', 'validOrderNumber is depretiated, use OrderFactory instead');
+        return OrderFactory::validAccessKey($this->AccessKey);
     }
 }
