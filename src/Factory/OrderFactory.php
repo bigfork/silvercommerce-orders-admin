@@ -5,12 +5,15 @@ namespace SilverCommerce\OrdersAdmin\Factory;
 use LogicException;
 use InvalidArgumentException;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\SiteConfig\SiteConfig;
 use SilverStripe\ORM\ValidationException;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
 use SilverCommerce\OrdersAdmin\Model\Invoice;
 use SilverCommerce\ContactAdmin\Model\Contact;
 use SilverCommerce\OrdersAdmin\Model\Estimate;
+use SilverCommerce\OrdersAdmin\Factory\LineItemFactory;
+use SilverStripe\Core\Config\Config;
 
 class OrderFactory
 {
@@ -64,6 +67,83 @@ class OrderFactory
      * @var int
      */
     protected $id;
+
+    /**
+     * Try to find the best prefix to use for an order number
+     * based on @link SiteConfig
+     * 
+     * @throws LogicException
+     *
+     * @return string
+     */
+    public static function findBestPrefix(DataObject $object): string
+    {
+        $config = SiteConfig::current_site_config();
+        $invoice_class = Config::inst()->get(static::class, 'invoice_class');
+        $estimate_class = Config::inst()->get(static::class, 'estimate_class');
+        $prefix = "";
+
+        if (is_a($object, $invoice_class)) {
+            $prefix = (string)$config->InvoiceNumberPrefix;
+        } elseif (is_a($object, $estimate_class))  {
+            $prefix = (string)$config->EstimateNumberPrefix;
+        } else {
+            throw new LogicException('Invalid object');
+        }
+
+        return $prefix;
+    }
+
+    /**
+     * Generate a random string for use in estimate numbering
+     *
+     * @return string
+     */
+    public static function generateRandomString($length = 20): string
+    {
+        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $randomString = '';
+
+        for ($i = 0; $i < $length; $i++) {
+            $randomString .= $characters[rand(0, strlen($characters) - 1)];
+        }
+
+        return $randomString;
+    }
+
+    /**
+     * Check if the provided order number is valid (not duplicated)
+     *
+     * @return bool
+     */
+    public static function validOrderRef($number, string $class): bool
+    {
+        $estimate_class = Config::inst()->get(static::class, 'estimate_class');
+
+        $existing = DataObject::get($estimate_class)
+            ->filter([
+                "ClassName" => $class,
+                "Ref" => $number
+            ])->first();
+
+        return !($existing);
+    }
+
+    /**
+     * Check if the provided access key does not already exist
+     * 
+     * @return bool
+     */
+    public static function validAccessKey(string $key)
+    {
+        $estimate_class = Config::inst()->get(static::class, 'estimate_class');
+
+        $existing = DataObject::get($estimate_class)
+            ->filter("AccessKey", $key)
+            ->first();
+
+        return !($existing);
+    }
 
     /**
      * Create a new instance of the factory and setup the estimate/invoice
@@ -131,6 +211,44 @@ class OrderFactory
         $this->setOrder($order);
 
         return $this;
+    }
+
+    /**
+     * Find the last relevent reference for the current type of object
+     * 
+     * @return int
+     */
+    public function findLastRef(): int
+    {
+        $order = $this->getOrder();
+        $classname = $order->ClassName;
+        $base = 0;
+
+        // Get the last instance of the current class
+        $last = $classname::get()
+            ->filter("ClassName", $classname)
+            ->sort("Ref", "DESC")
+            ->first();
+
+        // If we have a last estimate/invoice, get the ID of the last invoice
+        // so we can increment
+        if (isset($last)) {
+            $base = (int)$last->Ref;
+        }
+
+        return $base;
+    }
+
+    public function calculateNextRef(): int
+    {
+        $order = $this->getOrder();
+        $base = $this->findLastRef();
+
+        while (!OrderFactory::validOrderRef($base, $order->ClassName)) {
+            $base++;
+        }
+
+        return $base;
     }
 
     /**
@@ -310,6 +428,49 @@ class OrderFactory
         }
 
         return $this;
+    }
+
+    /**
+     * Factory method to convert this estimate to an
+     * order.
+     *
+     * This method writes and reloads the object so
+     * we are now working with the new object type
+     *
+     * If the current object is already a type of
+     * invoice, we just return the current object
+     * with no further action
+     *
+     * @return DataObject
+     */
+    public function convertEstimateToInvoice(): DataObject
+    {
+        $order = $this->getOrder();
+        $is_invoice = $this->getIsInvoice();
+
+        if ($is_invoice) {
+            return $this;
+        }
+    
+        $id = $order->ID;
+        $order->ClassName = Invoice::class;
+        $order->write();
+        unset($order);
+
+        // Re-retrieve Invoice from DB (so ORM generates
+        // correct object)
+        $order = Invoice::get()->byID($id);
+
+        // Re-configure invoice details
+        $order->Ref = $this->calculateNextRef();
+        $order->Prefix = self::findBestPrefix($order);
+        $order->StartDate = null;
+        $order->EndDate = null;
+        $order->write();
+
+        $this->setOrder($order);
+
+        return $order;
     }
 
     /**
