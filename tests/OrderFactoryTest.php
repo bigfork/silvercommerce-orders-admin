@@ -8,23 +8,17 @@ use SilverCommerce\OrdersAdmin\Model\Invoice;
 use SilverCommerce\OrdersAdmin\Model\Estimate;
 use SilverCommerce\OrdersAdmin\Factory\OrderFactory;
 use SilverCommerce\OrdersAdmin\Tests\Model\TestProduct;
+use SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisation;
+use SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisationOption;
 
 class OrderFactoryTest extends SapphireTest
 {
-    /**
-     * Add some scaffold order records
-     *
-     * @var string
-     */
-    protected static $fixture_file = 'OrdersScaffold.yml';
+    protected static $fixture_file = 'FactoryScaffold.yml';
 
-    /**
-     * Setup test only objects
-     *
-     * @var array
-     */
     protected static $extra_dataobjects = [
-        TestProduct::class
+        TestProduct::class,
+        TestCustomisation::class,
+        TestCustomisationOption::class
     ];
 
     public function testFindBestPrefix()

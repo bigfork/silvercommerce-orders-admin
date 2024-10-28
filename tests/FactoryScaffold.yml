@@ -1,0 +1,273 @@
+SilverCommerce\GeoZones\Model\Region:
+  bir:
+    Name: Birmingham
+    Code: BIR
+    CountryCode: GB
+  auk:
+    Name: Aukland
+    Code: AUK
+    CountryCode: NZ
+  al:
+    Name: Alabama
+    Code: AL
+    CountryCode: US
+
+SilverCommerce\GeoZones\Model\Zone:
+  uk:
+    Country: 'GB'
+    AllRegions: 1
+    Enabled: 1
+  nz:
+    Country: 'NZ'
+    AllRegions: 1
+    Enabled: 1
+  us:
+    Country: 'US'
+    AllRegions: 1
+    Enabled: 1
+
+SilverCommerce\TaxAdmin\Model\TaxRate:
+  vat:
+    ID: 1
+    Title: "Test VAT"
+    Rate: 20
+    Zones: =>SilverCommerce\GeoZones\Model\Zone.uk
+  reduced:
+    ID: 2
+    Title: "Test Reduced Rate"
+    Rate: 5
+    Zones: =>SilverCommerce\GeoZones\Model\Zone.nz
+  zero:
+    ID: 3
+    Title: "Test Zero Rate"
+    Rate: 0
+    Zones: =>SilverCommerce\GeoZones\Model\Zone.us
+
+SilverCommerce\TaxAdmin\Model\TaxCategory:
+  standard_goods:
+    Title: "Standard Goods"
+    Rates:
+      - =>SilverCommerce\TaxAdmin\Model\TaxRate.vat
+      - =>SilverCommerce\TaxAdmin\Model\TaxRate.reduced
+      - =>SilverCommerce\TaxAdmin\Model\TaxRate.zero
+
+SilverCommerce\CatalogueAdmin\Model\CatalogueProduct:
+  socks:
+    Title: "Socks"
+    StockID: "so1"
+    BasePrice: 5.99
+    StockLevel: 10
+  notax:
+    Title: "No Tax Item"
+    StockID: "nt1"
+    BasePrice: 6.50
+    StockLevel: 10
+    Weight: 0.5
+  tax:
+    Title: "Tax Item"
+    StockID: "t1"
+    BasePrice: 5.99
+    StockLevel: 10
+    Weight: 0.75
+    TaxRate: =>SilverCommerce\TaxAdmin\Model\TaxRate.vat
+  categorised:
+    Title: "Categorised Item"
+    StockID: "ci1"
+    BasePrice: 4.65
+    TaxCategory: =>SilverCommerce\TaxAdmin\Model\TaxCategory.standard_goods
+
+SilverCommerce\OrdersAdmin\Model\LineItemCustomisation:
+  freecustomisation:
+    Title: "Customisation"
+    Value: "Free"
+    Number: 12345
+  expensivecustomisation:
+    Title: "Customisation"
+    Value: "Expensive"
+
+SilverCommerce\OrdersAdmin\Model\PriceModifier:
+  negativemodifier:
+    Name: "Negative"
+    ModifyPrice: -1.50
+  positivemodifier:
+    Name: "Positive"
+    ModifyPrice: 0.75
+
+SilverCommerce\OrdersAdmin\Model\LineItem:
+  deliverable:
+    Title: "Deliverable Item"
+    Deliverable: true
+    ProductClass: SilverCommerce\CatalogueAdmin\Model\CatalogueProduct
+  notdeliverable:
+    Title: "Non Deliverable Item"
+    Deliverable: false
+    ProductClass: SilverCommerce\CatalogueAdmin\Model\CatalogueProduct
+  notaxitem:
+    Title: "A cheap item"
+    Quantity: 2
+    UnmodifiedPrice: 6.50
+    StockID: "nt1"
+    ProductClass: SilverCommerce\CatalogueAdmin\Model\CatalogueProduct
+    TaxRate: =>SilverCommerce\TaxAdmin\Model\TaxRate.zero # Zero
+  reducedtaxitem:
+    Title: "An item with reduced tax"
+    Quantity: 2
+    ProductClass: SilverCommerce\CatalogueAdmin\Model\CatalogueProduct
+    UnmodifiedPrice: 5.99 # 0.2995 tax per item
+    TaxRate: =>SilverCommerce\TaxAdmin\Model\TaxRate.reduced # Reduced
+  taxitemone:
+    Title: "A tax item"
+    Quantity: 2
+    UnmodifiedPrice: 5.99 # 1.198 tax per item
+    StockID: "t1"
+    ProductClass: SilverCommerce\CatalogueAdmin\Model\CatalogueProduct
+    TaxRate: =>SilverCommerce\TaxAdmin\Model\TaxRate.vat # VAT
+  taxitemtwo:
+    Title: "Another tax item"
+    Quantity: 2
+    ProductClass: SilverCommerce\CatalogueAdmin\Model\CatalogueProduct
+    UnmodifiedPrice: 5.99 # 1.198 tax per item
+    TaxRate: =>SilverCommerce\TaxAdmin\Model\TaxRate.vat # VAT
+  taxitemthree:
+    Title: "Two cheap items"
+    Quantity: 2
+    Weight: 0.75
+    ProductClass: SilverCommerce\CatalogueAdmin\Model\CatalogueProduct
+    UnmodifiedPrice: 3.99 # 0.798 tax per item
+    TaxRate: =>SilverCommerce\TaxAdmin\Model\TaxRate.vat # VAT
+  sockitem:
+    Title: "Socks"
+    Quantity: 1
+    Weight: 0.5
+    StockID: "so1"
+    ProductClass: SilverCommerce\CatalogueAdmin\Model\CatalogueProduct
+    UnmodifiedPrice: 5.99
+    TaxRate: =>SilverCommerce\TaxAdmin\Model\TaxRate.zero # Zero
+  customitem:
+    Title: "Socks"
+    Quantity: 1
+    Weight: 0.5
+    ProductClass: SilverCommerce\CatalogueAdmin\Model\CatalogueProduct
+    UnmodifiedPrice: 5.99
+    TaxRate: =>SilverCommerce\TaxAdmin\Model\TaxRate.zero # Zero
+    Customisations:
+      - =>SilverCommerce\OrdersAdmin\Model\LineItemCustomisation.freecustomisation
+      - =>SilverCommerce\OrdersAdmin\Model\LineItemCustomisation.expensivecustomisation
+    PriceModifications:
+      - =>SilverCommerce\OrdersAdmin\Model\PriceModifier.negativemodifier
+      - =>SilverCommerce\OrdersAdmin\Model\PriceModifier.positivemodifier
+
+  taxtestableuk:
+    Title: "UK Tax Test item"
+    StockID: "ci1"
+    ProductClass: SilverCommerce\CatalogueAdmin\Model\CatalogueProduct
+    Quantity: 1
+    UnmodifiedPrice: 5.50
+  fixedtaxtestableuk:
+    Title: "UK Fixed Tax Test item"
+    StockID: "t1"
+    ProductClass: SilverCommerce\CatalogueAdmin\Model\CatalogueProduct
+    Quantity: 1
+    UnmodifiedPrice: 5.99
+
+SilverCommerce\OrdersAdmin\Model\Estimate:
+  addressdetails_uk:
+    Ref: 1231
+    Address1: "123 Street Name"
+    Address2: "A Place"
+    City: "A City"
+    PostCode: "AB12 3AB"
+    County: "BIR"
+    Country: "GB"
+    DeliveryAddress1: "321 Street Name"
+    DeliveryCity: "Delivery City"
+    DeliveryPostCode: "ZX98 9XZ"
+    DeliveryCounty: "BIR"
+    DeliveryCountry: "GB"
+    Items: =>SilverCommerce\OrdersAdmin\Model\LineItem.taxtestableuk
+  addressdetails_uk_two:
+    Ref: 1232
+    Address1: "123 Street Name"
+    Address2: "Another Place"
+    City: "A City"
+    PostCode: "BB55 5FG"
+    County: "BIR"
+    Country: "GB"
+    DeliveryAddress1: "96 Some Road"
+    DeliveryCity: "Delivery City"
+    DeliveryPostCode: "ZX98 9XZ"
+    DeliveryCounty: "BIR"
+    DeliveryCountry: "GB"
+    Items: =>SilverCommerce\OrdersAdmin\Model\LineItem.fixedtaxtestableuk
+  deliverable:
+    Ref: 1233
+    Items:
+      - =>SilverCommerce\OrdersAdmin\Model\LineItem.notdeliverable
+      - =>SilverCommerce\OrdersAdmin\Model\LineItem.deliverable
+  notdeliverable:
+    Ref: 1234
+    Items: =>SilverCommerce\OrdersAdmin\Model\LineItem.notdeliverable
+  standardnotax:
+    Ref: 1235
+    Items: =>SilverCommerce\OrdersAdmin\Model\LineItem.notaxitem
+  standardtax:
+    Ref: 1236
+    Items: =>SilverCommerce\OrdersAdmin\Model\LineItem.taxitemone
+  complextax:
+    Ref: 1237
+    Items:
+      - =>SilverCommerce\OrdersAdmin\Model\LineItem.reducedtaxitem
+      - =>SilverCommerce\OrdersAdmin\Model\LineItem.taxitemtwo
+
+SilverCommerce\OrdersAdmin\Model\Invoice:
+  unpaid:
+    Ref: 5555
+
+SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisableProduct:
+  predefined:
+    Title: "Product with predefined options"
+    BasePrice: 10.50
+    StockID: prcus111
+  freetext:
+    Title: "Product with freetext option"
+    BasePrice: 4.50
+    StockID: prcus222
+  chargable:
+    Title: "Product with chargable options"
+    BasePrice: 13.25
+    StockID: prcus333
+
+SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisation:
+  colour:
+    Title: "Colour"
+    Parent: =>SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisableProduct.predefined
+  personalise:
+    Title: "Personalise"
+    Parent: =>SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisableProduct.freetext
+  size:
+    Title: "Size"
+    Parent: =>SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisableProduct.chargable
+
+SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisationOption:
+  colour_red:
+    Title: "Red"
+    Parent: =>SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisation.colour
+  colour_blue:
+    Title: "Blue"
+    Parent: =>SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisation.colour
+  colour_green:
+    Title: "Green"
+    Parent: =>SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisation.colour
+
+  size_sm:
+    Title: "Small"
+    ModifyPrice: 0.00
+    Parent: =>SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisation.size
+  size_md:
+    Title: "Medium"
+    ModifyPrice: 1.25
+    Parent: =>SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisation.size
+  size_lg:
+    Title: "Large"
+    ModifyPrice: 2.75
+    Parent: =>SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisation.size

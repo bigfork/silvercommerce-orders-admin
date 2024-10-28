@@ -10,12 +10,22 @@ use SilverCommerce\TaxAdmin\Model\TaxRate;
 use SilverCommerce\OrdersAdmin\Model\LineItem;
 use SilverCommerce\OrdersAdmin\Model\PriceModifier;
 use SilverCommerce\OrdersAdmin\Factory\LineItemFactory;
+use SilverCommerce\OrdersAdmin\Tests\Model\TestProduct;
 use SilverCommerce\CatalogueAdmin\Model\CatalogueProduct;
 use SilverCommerce\OrdersAdmin\Model\LineItemCustomisation;
+use SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisation;
+use SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisableProduct;
+use SilverCommerce\OrdersAdmin\Tests\Model\TestCustomisationOption;
 
 class LineItemFactoryTest extends SapphireTest
 {
-    protected static $fixture_file = 'OrdersScaffold.yml';
+    protected static $fixture_file = 'FactoryScaffold.yml';
+
+    protected static $extra_dataobjects = [
+        TestProduct::class,
+        TestCustomisation::class,
+        TestCustomisationOption::class
+    ];
 
     /**
      * Add some extra functionality on construction
@@ -204,6 +214,168 @@ class LineItemFactoryTest extends SapphireTest
         $this->assertEquals(4, $item->NoTaxPrice);
 
         $this->assertCount(1, $item->PriceModifications());
+    }
+
+    public function testAutomaticCustomisation()
+    {
+        $product = $this->objFromFixture(
+            TestCustomisableProduct::class,
+            'predefined'
+        );
+        $colour = $this->objFromFixture(
+            TestCustomisation::class,
+            'colour'
+        );
+        $red = $this->objFromFixture(
+            TestCustomisationOption::class,
+            'colour_red'
+        );
+        $blue = $this->objFromFixture(
+            TestCustomisationOption::class,
+            'colour_blue'
+        );
+        $green = $this->objFromFixture(
+            TestCustomisationOption::class,
+            'colour_green'
+        );
+
+        $factory = LineItemFactory::create()
+            ->setProduct($product)
+            ->setQuantity(1)
+            ->setExtraData([$colour->ID => $red->ID])
+            ->makeItem()
+            ->write();
+
+        $item = $factory->getItem();
+
+        $this->assertCount(1, $item->Customisations());
+        $this->assertEquals(
+            'Colour',
+            $item->Customisations()->first()->Title
+        );
+        $this->assertEquals(
+            'Red',
+            $item->Customisations()->first()->Value
+        );
+
+        $factory = LineItemFactory::create()
+            ->setProduct($product)
+            ->setQuantity(1)
+            ->setExtraData([$colour->ID => $blue->ID])
+            ->makeItem()
+            ->write();
+
+        $item = $factory->getItem();
+
+        $this->assertCount(1, $item->Customisations());
+        $this->assertEquals(
+            'Colour',
+            $item->Customisations()->first()->Title
+        );
+        $this->assertEquals(
+            'Blue',
+            $item->Customisations()->first()->Value
+        );
+
+        $factory = LineItemFactory::create()
+            ->setProduct($product)
+            ->setQuantity(1)
+            ->setExtraData([$colour->ID => $red->ID])
+            ->makeItem()
+            ->write();
+
+        $item = $factory->getItem();
+
+        $this->assertCount(1, $item->Customisations());
+        $this->assertEquals(
+            'Colour',
+            $item->Customisations()->first()->Title
+        );
+        $this->assertEquals(
+            'Red',
+            $item->Customisations()->first()->Value
+        );
+    }
+
+    public function testAutomaticPriceModification()
+    {
+        $product = $this->objFromFixture(
+            TestCustomisableProduct::class,
+            'chargable'
+        );
+        $size = $this->objFromFixture(
+            TestCustomisation::class,
+            'size'
+        );
+        $sm = $this->objFromFixture(
+            TestCustomisationOption::class,
+            'size_sm'
+        );
+        $md = $this->objFromFixture(
+            TestCustomisationOption::class,
+            'size_md'
+        );
+        $lg = $this->objFromFixture(
+            TestCustomisationOption::class,
+            'size_lg'
+        );
+
+        $factory = LineItemFactory::create()
+            ->setProduct($product)
+            ->setQuantity(1)
+            ->setExtraData([$size->ID => $sm->ID])
+            ->makeItem()
+            ->write();
+
+        $item = $factory->getItem();
+
+        $this->assertCount(1, $item->PriceModifications());
+        $this->assertEquals(
+            13.25,
+            $item->getNoTaxPrice()
+        );
+        $this->assertEquals(
+            'Size',
+            $item->PriceModifications()->first()->Title
+        );
+
+        $factory = LineItemFactory::create()
+            ->setProduct($product)
+            ->setQuantity(1)
+            ->setExtraData([$size->ID => $md->ID])
+            ->makeItem()
+            ->write();
+
+        $item = $factory->getItem();
+
+        $this->assertCount(1, $item->PriceModifications());
+        $this->assertEquals(
+            14.50,
+            $item->getNoTaxPrice()
+        );
+        $this->assertEquals(
+            'Size',
+            $item->PriceModifications()->first()->Title
+        );
+
+        $factory = LineItemFactory::create()
+            ->setProduct($product)
+            ->setQuantity(1)
+            ->setExtraData([$size->ID => $lg->ID])
+            ->makeItem()
+            ->write();
+
+        $item = $factory->getItem();
+
+        $this->assertCount(1, $item->PriceModifications());
+        $this->assertEquals(
+            16.00,
+            $item->getNoTaxPrice()
+        );
+        $this->assertEquals(
+            'Size',
+            $item->PriceModifications()->first()->Title
+        );
     }
 
     public function testFindBestTaxRate()
