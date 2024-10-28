@@ -13,11 +13,12 @@ use SilverCommerce\OrdersAdmin\Model\Invoice;
 use SilverCommerce\ContactAdmin\Model\Contact;
 use SilverCommerce\OrdersAdmin\Model\Estimate;
 use SilverCommerce\OrdersAdmin\Factory\LineItemFactory;
+use SilverCommerce\OrdersAdmin\Traits\ExtraData;
 use SilverStripe\Core\Config\Config;
 
 class OrderFactory
 {
-    use Injectable, Configurable;
+    use Injectable, Configurable, ExtraData;
 
     /**
      * The class this factory uses to create an estimate
@@ -275,7 +276,6 @@ class OrderFactory
         DataObject $product,
         int $qty = 1,
         bool $lock = false,
-        array $custom = [],
         bool $deliver = true
     ) {
         $factory = LineItemFactory::create()
@@ -283,28 +283,9 @@ class OrderFactory
             ->setQuantity($qty)
             ->setLock($lock)
             ->setDeliverable($deliver)
+            ->setExtraData($this->getExtraData())
             ->makeItem()
             ->write();
-        
-        // Setup customisations
-        foreach ($custom as $customisation) {
-            if (!isset($customisation['Title']) || !isset($customisation['Value'])) {
-                throw new LogicException('Customisations require a Title AND a value');
-            }
-
-            $custom_item = $factory->customise(
-                $customisation['Title'],
-                $customisation['Value']
-            );
-
-            if (isset($customisation['BasePrice'])) {
-                $factory->modifyPrice(
-                    $customisation['Title'] . ': ' .$customisation['Value'],
-                    $customisation['BasePrice'],
-                    $custom_item->ID
-                );
-            }
-        }
 
         $this->addFromLineItemFactory($factory);
 

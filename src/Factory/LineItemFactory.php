@@ -3,9 +3,12 @@
 namespace SilverCommerce\OrdersAdmin\Factory;
 
 use LogicException;
+use SilverCommerce\OrdersAdmin\Interfaces\LineItemCustomisable;
 use SilverStripe\ORM\SS_List;
+use SilverStripe\Core\ClassInfo;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Dev\Deprecation;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ValidationException;
 use SilverCommerce\TaxAdmin\Model\TaxRate;
 use SilverStripe\Core\Config\Configurable;
@@ -13,14 +16,16 @@ use SilverStripe\Core\Injector\Injectable;
 use SilverCommerce\OrdersAdmin\Model\Estimate;
 use SilverCommerce\OrdersAdmin\Model\LineItem;
 use SilverCommerce\OrdersAdmin\Model\PriceModifier;
+use SilverCommerce\OrdersAdmin\Interfaces\LineItemPricable;
 use SilverCommerce\OrdersAdmin\Model\LineItemCustomisation;
+use SilverCommerce\OrdersAdmin\Traits\ExtraData;
 
 /**
  * Factory that handles setting up line items based on submitted data
  */
 class LineItemFactory
 {
-    use Injectable, Configurable;
+    use Configurable, Injectable, ExtraData;
 
     const ITEM_CLASS = LineItem::class;
 
@@ -130,9 +135,21 @@ class LineItemFactory
      */
     protected $customisations = [];
 
+    protected function getPotentialPriceModifiers()
+    {
+        return ClassInfo::implementorsOf(LineItemPricable::class);
+    }
+
+    protected function getPotentialCustomisers()
+    {
+        return ClassInfo::implementorsOf(LineItemCustomisable::class);
+    }
+
     /**
-     * Either find an existing line item (based on the submitted data),
-     * or return a new one.
+     * Either find an existing line item (based on the submitted
+     * data), or generate a new one.
+     * 
+     * Also search for any potential 
      *
      * @return self
      */
@@ -142,10 +159,26 @@ class LineItemFactory
 
         // Setup initial line item
         $item = $class::create($this->getItemArray());
+        $data = $this->getExtraData();
 
         // Setup Key
         $item->Key = $this->generateKey();
         $this->setItem($item);
+
+        $modifiers = $this->getPotentialPriceModifiers();
+        $customisers = $this->getPotentialCustomisers();
+
+        foreach ($modifiers as $modifier_class) {
+            /** @var LineItemPricable */
+            $pricable = Injector::inst()->get($modifier_class, true);
+            $pricable->modifyItemPrice($this, $data);
+        }
+
+        foreach ($customisers as $custom_class) {
+            /** @var LineItemCustomiser */
+            $customiser = Injector::inst()->get($custom_class, true);
+            $customiser->customiseLineItem($this, $data);
+        }
 
         return $this;
     }
@@ -163,7 +196,8 @@ class LineItemFactory
     public function customise(
         string $name,
         string $value,
-        array $additional_data = []
+        array $additional_data = [],
+        DataObject $related = null
     ): LineItemCustomisation {
         $item = $this->getItem();
 
@@ -178,6 +212,10 @@ class LineItemFactory
         $customisation = $class::create();
         $customisation->Title = $name;
         $customisation->Value = $value;
+
+        if (!empty($related)) {
+            $customisation->Related = $related;
+        }
 
         $item
             ->Customisations()
@@ -196,6 +234,7 @@ class LineItemFactory
 
         $customisation->write();
         $this->update();
+
         return $customisation;
     }
 
@@ -203,9 +242,9 @@ class LineItemFactory
      * Generate a customisation and/or price
      * modification for the current item
      *
-     * @param string $name The name of this modification (eg: size)
-     * @param float  $amount The amount to modify the price by (either positive or negative)
-     * @param int $customisation_id Optionally link this to a customisation
+     * @param string     $name The name of this modification (eg: size)
+     * @param float      $amount The amount to modify the price by (either positive or negative)
+     * @param DataObject $related Optionally link this relation to a @link DataObject
      *
      * @throws LogicException
      *
@@ -214,38 +253,47 @@ class LineItemFactory
     public function modifyPrice(
         string $name,
         float $amount,
-        int $customisation_id = 0
+        DataObject $related = null
     ): PriceModifier {
         $item = $this->getItem();
+        $modifier_class = self::PRICE_CLASS;
+        $modifier = null;
 
         if (empty($item)) {
             throw new LogicException('No LineItem available, did you use `makeItem`?');
         }
 
-        $class = self::PRICE_CLASS;
+        if (!empty($related) && !$related instanceof LineItemPricable) {
+            throw new LogicException('Related objects for a LineItem modifier must implement LineItemPricable');
+        }
 
-        /** @var PriceModifier */
-        $modifier =  $class::create();
+        if (!empty($related)) {
+            /** @var PriceModifier */
+            $modifier = DataObject::get($modifier_class)
+                ->filter([
+                    'RelatedObjectID' => $related->ID,
+                    'RelatedObjectClass' => $related->ClassName
+                ])->first();
+        }
+
+        if (empty($modifier)) {
+            /** @var PriceModifier */
+            $modifier =  $modifier_class::create();
+        }
+
         $modifier->Name = $name;
         $modifier->ModifyPrice = $amount;
+
+        if (!empty($related)) {
+            $modifier->RelatedObject = $related;
+        }
+
+        $modifier->write();
 
         $item
             ->PriceModifications()
             ->add($modifier);
 
-        if ($customisation_id > 0) {
-            $customisation = $item
-                ->Customisations()
-                ->byID($customisation_id);
-            
-            if (empty($customisation)) {
-                throw new LogicException("Invalid customisation passed to modifier");
-            }
-
-            $modifier->CustomisationID = $customisation_id;
-        }
-
-        $modifier->write();
         return $modifier;
     }
 
