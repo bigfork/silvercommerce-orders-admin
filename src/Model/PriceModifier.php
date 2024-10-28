@@ -25,24 +25,26 @@ class PriceModifier extends DataObject
     private static $table_name = 'Orders_PriceModifier';
 
     private static $db = [
-        'Name' => 'Varchar',
-        'ModifyPrice' => 'Decimal(9,3)'
+        'Name'          => 'Varchar',
+        'ModifyPrice'   => 'Decimal(9,3)'
     ];
 
     private static $has_one = [
-        'LineItem' => LineItem::class,
+        'LineItem'      => LineItem::class,
+        'RelatedObject' => DataObject::class,
         'Customisation' => LineItemCustomisation::class
     ];
 
     private static $summary_fields = [
         'Name',
         'ModifyPrice',
-        'CustomisationID'
+        'RelatedObject.Title'
     ];
 
     private static $field_labels = [
         'Name' => 'Modification applied',
-        'ModifyPrice' => 'Modify base item price'
+        'ModifyPrice' => 'Modify base item price',
+        'RelatedObject.Title' => 'Base Object'
     ];
 
     public function isNegative(): bool

@@ -48,7 +48,8 @@ class LineItemCustomisation extends DataObject implements TaxableProvider
      * @var array
      */
     private static $has_one = [
-        "Parent" => LineItem::class
+        "Parent" => LineItem::class,
+        'RelatedObject' => DataObject::class
     ];
 
     /**
