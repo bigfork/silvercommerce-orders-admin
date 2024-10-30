@@ -25,4 +25,16 @@ trait ExtraData
         $this->extra_data = $data;
         return $this;
     }
+
+    public function addExtraDataItem(string $key, mixed $value): self
+    {
+        $this->extra_data[$key] = $value;
+        return $this;
+    }
+
+    public function removeExtraDataItem(string $key): self
+    {
+        unset($this->extra_data[$key]);
+        return $this;
+    }
 }
