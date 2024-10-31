@@ -20,8 +20,7 @@ class TestCustomisableProduct extends TestProduct implements TestOnly, LineItemC
     public function modifyItemPrice(
         LineItemFactory $factory,
         array $data = []
-    ): SS_List {
-        $items = ArrayList::create();
+    ): void {
         $item = $factory->getItem();
         $product = $item->findStockItem();
 
@@ -47,14 +46,13 @@ class TestCustomisableProduct extends TestProduct implements TestOnly, LineItemC
             );
         }
 
-        return $items;
+        return;
     }
 
     public function customiseLineItem(
         LineItemFactory $factory,
         array $data = []
-    ): SS_List {
-        $items = ArrayList::create();
+    ): void {
         $item = $factory->getItem();
         $product = $item->findStockItem();
 
@@ -83,6 +81,6 @@ class TestCustomisableProduct extends TestProduct implements TestOnly, LineItemC
             );
         }
 
-        return $items;
+        return;
     }
 }
