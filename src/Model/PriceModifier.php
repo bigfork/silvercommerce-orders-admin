@@ -17,6 +17,7 @@ use SilverStripe\ORM\DataObject;
  *
  * @method LineItem LineItem
  * @method LineItemCustomisation Customisation
+ * @method DataObject RelatedObject
  */
 class PriceModifier extends DataObject
 {
@@ -35,16 +36,20 @@ class PriceModifier extends DataObject
         'Customisation' => LineItemCustomisation::class
     ];
 
+    private static $casting = [
+        'RelatedTitle' => 'Varchar'
+    ];
+
     private static $summary_fields = [
         'Name',
         'ModifyPrice',
-        'RelatedObject.Title'
+        'RelatedTitle'
     ];
 
     private static $field_labels = [
         'Name' => 'Modification applied',
         'ModifyPrice' => 'Modify base item price',
-        'RelatedObject.Title' => 'Base Object'
+        'RelatedTitle' => 'Base Object'
     ];
 
     public function isNegative(): bool
@@ -80,5 +85,16 @@ class PriceModifier extends DataObject
     public function getShowTaxString()
     {
         return false;
+    }
+
+    public function getRelatedTitle(): string
+    {
+        $related = $this->RelatedObject();
+
+        if ($related->exists()) {
+            return $related->getTitle();
+        }
+
+        return "";
     }
 }
