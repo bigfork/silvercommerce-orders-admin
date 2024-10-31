@@ -208,7 +208,7 @@ class LineItemFactory
         $mapped_data = [];
         $class = self::CUSTOM_CLASS;
 
-        /** @var LineItemCustomisation */
+        /** @var LineItemCustomisation */   
         $customisation = $class::create();
         $customisation->Title = $name;
         $customisation->Value = $value;
@@ -221,9 +221,9 @@ class LineItemFactory
             ->Customisations()
             ->add($customisation);
 
-        if (count($additional_data) > 0) {
+        if (count($additional_data) === 0) {
             $customisation->write();
-            return $this;
+            return $customisation;
         }
 
         foreach ($additional_data as $key => $value) {
@@ -263,14 +263,11 @@ class LineItemFactory
             throw new LogicException('No LineItem available, did you use `makeItem`?');
         }
 
-        if (!empty($related) && !$related instanceof LineItemPricable) {
-            throw new LogicException('Related objects for a LineItem modifier must implement LineItemPricable');
-        }
-
         if (!empty($related)) {
             /** @var PriceModifier */
             $modifier = DataObject::get($modifier_class)
                 ->filter([
+                    'LineItemID' => $item->ID,
                     'RelatedObjectID' => $related->ID,
                     'RelatedObjectClass' => $related->ClassName
                 ])->first();
