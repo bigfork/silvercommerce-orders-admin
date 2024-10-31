@@ -18,5 +18,5 @@ interface LineItemPricable
     public function modifyItemPrice(
         LineItemFactory $factory,
         array $data = []
-    ): SS_List;
+    ): void;
 }

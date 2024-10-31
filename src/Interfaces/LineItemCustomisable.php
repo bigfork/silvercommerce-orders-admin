@@ -18,5 +18,5 @@ interface LineItemCustomisable
     public function customiseLineItem(
         LineItemFactory $factory,
         array $data = []
-    ): SS_List;
+    ): void;
 }
