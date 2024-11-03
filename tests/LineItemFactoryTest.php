@@ -3,8 +3,11 @@
 namespace SilverCommerce\OrdersAdmin\Tests;
 
 use SilverStripe\i18n\i18n;
+use SilverStripe\Control\Session;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\Control\HTTPRequest;
 use SilverCommerce\GeoZones\Model\Zone;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\ORM\ValidationException;
 use SilverCommerce\TaxAdmin\Model\TaxRate;
 use SilverCommerce\OrdersAdmin\Model\LineItem;
@@ -27,16 +30,19 @@ class LineItemFactoryTest extends SapphireTest
         TestCustomisationOption::class
     ];
 
-    /**
-     * Add some extra functionality on construction
-     *
-     * @return void
-     */
     public function setUp(): void
     {
-        parent::setUp();
+        // Ensure we setup a session and the current request
+        $request = new HTTPRequest('GET', '/');
+        $session = new Session(null);
+        $session->init($request);
+        $request->setSession($session);
+        Injector::inst()
+            ->registerService($request, HTTPRequest::class);
 
         i18n::set_locale('en_GB');
+
+        parent::setUp();
     }
 
     public function testMakeItem()
