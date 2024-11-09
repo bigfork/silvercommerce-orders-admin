@@ -536,18 +536,16 @@ class LineItemFactory
         }
 
         $product = $item->FindStockItem();
+
         if (!empty($product) && $product->exists()) {
             $this->setProduct($product);
         }
 
-        $this->setQuantity($item->Quantity);
-
-        // Only lock a line item if we have explicitly asked to
-        if (property_exists($item, 'Locked')) {
-            $this->setLock($item->Locked);
-        }
-
-        $this->setParent($item->Parent());
+        $this
+            ->setQuantity($item->Quantity)
+            ->setLock($item->Locked)
+            ->setDeliverable($item->Deliverable)
+            ->setParent($item->Parent());
 
         return $this;
     }
