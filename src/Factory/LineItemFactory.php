@@ -145,6 +145,34 @@ class LineItemFactory
         return ClassInfo::implementorsOf(LineItemCustomisable::class);
     }
 
+    protected function performPriceModifications()
+    {
+        $data = $this->getExtraData();
+        $modifiers = $this->getPotentialPriceModifiers();
+
+        foreach ($modifiers as $modifier_class) {
+            /** @var LineItemPricable */
+            $pricable = Injector::inst()->get($modifier_class, true);
+            $pricable->modifyItemPrice($this, $data);
+        }
+
+        return;
+    }
+
+    protected function performCustomisation()
+    {
+        $data = $this->getExtraData();
+        $customisers = $this->getPotentialCustomisers();
+
+        foreach ($customisers as $custom_class) {
+            /** @var LineItemCustomiser */
+            $customiser = Injector::inst()->get($custom_class, true);
+            $customiser->customiseLineItem($this, $data);
+        }
+
+        return;
+    }
+
     /**
      * Either find an existing line item (based on the submitted
      * data), or generate a new one.
@@ -156,29 +184,33 @@ class LineItemFactory
     public function makeItem(): self
     {
         $class = self::ITEM_CLASS;
-
         // Setup initial line item
         $item = $class::create($this->getItemArray());
-        $data = $this->getExtraData();
-
-        // Setup Key
         $item->Key = $this->generateKey();
+
         $this->setItem($item);
 
-        $modifiers = $this->getPotentialPriceModifiers();
-        $customisers = $this->getPotentialCustomisers();
+        $this->performPriceModifications();
+        $this->performCustomisation();
 
-        foreach ($modifiers as $modifier_class) {
-            /** @var LineItemPricable */
-            $pricable = Injector::inst()->get($modifier_class, true);
-            $pricable->modifyItemPrice($this, $data);
-        }
+        return $this;
+    }
 
-        foreach ($customisers as $custom_class) {
-            /** @var LineItemCustomiser */
-            $customiser = Injector::inst()->get($custom_class, true);
-            $customiser->customiseLineItem($this, $data);
-        }
+    /**
+     * Update the current line item
+     *
+     * @return self
+     */
+    public function update()
+    {
+        $item = $this->getItem();
+        $item->update($this->getItemArray());
+        $item->Key = $this->generateKey();
+
+        $this->setItem($item);
+
+        $this->performPriceModifications();
+        $this->performCustomisation();
 
         return $this;
     }
@@ -292,21 +324,6 @@ class LineItemFactory
             ->add($modifier);
 
         return $modifier;
-    }
-
-    /**
-     * Update the current line item
-     *
-     * @return self
-     */
-    public function update()
-    {
-        $item = $this->getItem();
-        $item->update($this->getItemArray());
-        $item->Key = $this->generateKey();
-        $this->setItem($item);
-
-        return $this;
     }
 
     /**
