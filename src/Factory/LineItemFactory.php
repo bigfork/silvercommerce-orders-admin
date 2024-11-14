@@ -369,6 +369,8 @@ class LineItemFactory
 
             if (strlen($country) >= 2 && strlen($region) >= 2) {
                 $rate = $category->ValidTax($country, $region);
+            } else {
+                $rate = $product->getTaxRate();
             }
         }
 
