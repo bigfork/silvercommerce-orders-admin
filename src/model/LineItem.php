@@ -98,7 +98,7 @@ class LineItem extends DataObject implements TaxableProvider
         "Tax"         => TaxRate::class,
         "TaxRate"     => TaxRate::class
     ];
-    
+
     /**
      * One to many associations
      *
@@ -276,14 +276,14 @@ class LineItem extends DataObject implements TaxableProvider
                         new GridFieldEditButton(),
                         new GridFieldDeleteAction()
                     );
-                
+
                     $custom_field->setConfig($config);
             }
         });
 
         return parent::getCMSFields();
     }
-    
+
     /**
      * Get the price for a single line item (unit), minus any tax
      *
@@ -296,7 +296,7 @@ class LineItem extends DataObject implements TaxableProvider
         foreach ($this->Customisations() as $customisation) {
             $price += $customisation->getBasePrice();
         }
-        
+
         $result = $this->getOwner()->filterTaxableExtensionResults(
             $this->extend("updateNoTaxPrice", $price)
         );
@@ -394,7 +394,7 @@ class LineItem extends DataObject implements TaxableProvider
         $total = $this->SubTotal + $this->TaxTotal;
 
         $this->extend("updateTotal", $total);
-    
+
         return $total;
     }
 
@@ -416,7 +416,7 @@ class LineItem extends DataObject implements TaxableProvider
             return $product->Image();
         }
     }
-    
+
     /**
      * Provide a string of customisations seperated by a comma but not
      * including a price
@@ -460,7 +460,7 @@ class LineItem extends DataObject implements TaxableProvider
 
         return implode(", ", $return);
     }
-    
+
     /**
      * Get list of customisations rendering into a basic
      * HTML string
@@ -472,7 +472,7 @@ class LineItem extends DataObject implements TaxableProvider
         $return = HTMLText::create();
         $items = $this->Customisations();
         $html = "";
-        
+
         if ($items && $items->exists()) {
             foreach ($items as $item) {
                 $html .= $item->Title . ': ' . $item->Value . ";<br/>";
@@ -485,7 +485,7 @@ class LineItem extends DataObject implements TaxableProvider
 
         return $return;
     }
-        
+
     /**
      * Match this item to another object in the Database, by the
      * provided details.
@@ -551,7 +551,7 @@ class LineItem extends DataObject implements TaxableProvider
         $return = $stock - $qty;
 
         $this->extend("updateCheckStockLevel", $return, $qty);
-        
+
         return $return;
     }
 
@@ -637,9 +637,9 @@ class LineItem extends DataObject implements TaxableProvider
      * @param boolean $doWrite (write the cloned object to DB)
      * @return DataObject $clone The duplicated object
      */
-    public function duplicate($doWrite = true, $manyMany = "many_many")
+    public function duplicate($doWrite = true, ?array $relations = null): static
     {
-        $clone = parent::duplicate($doWrite);
+        $clone = parent::duplicate($doWrite, $relations);
 
         // Ensure we clone any customisations
         if ($doWrite) {
