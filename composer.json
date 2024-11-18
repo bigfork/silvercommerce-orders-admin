@@ -25,29 +25,39 @@
     },
     "require": {
         "php": ">=7.1.0",
-        "silverstripe/framework": "~4.0",
-        "silverstripe/siteconfig": "~4.0",
-        "silverstripe/admin": "~1.0",
-        "silverstripe/versioned": "~1.0",
-        "colymba/gridfield-bulk-editing-tools": "^3.1",
-        "symbiote/silverstripe-gridfieldextensions": "^3.6",
+        "silverstripe/framework": "^5",
+        "silverstripe/siteconfig": "^5",
+        "silverstripe/admin": "^2",
+        "silverstripe/versioned": "^2",
+        "colymba/gridfield-bulk-editing-tools": "^4",
+        "symbiote/silverstripe-gridfieldextensions": "^4",
         "dompdf/dompdf": "^0.8",
-        "i-lateral/silverstripe-modeladminplus": "~1.1",
-        "silvercommerce/settings": "^1.0",
-        "silvercommerce/tax-admin": "^1.4",
-        "silvercommerce/contact-admin": "^1.0",
-        "silvercommerce/versionhistoryfield": "^1.0",
-        "silvershop/silverstripe-hasonefield": "^3.0",
-        "lekoala/silverstripe-uuid": "^1.1"
+        "i-lateral/silverstripe-modeladminplus": "^2",
+        "silvercommerce/settings": "dev-ss5",
+        "silvercommerce/tax-admin": "dev-ss5",
+        "silvercommerce/contact-admin": "dev-ss5",
+        "silvercommerce/versionhistoryfield": "dev-ss5",
+        "silvershop/silverstripe-hasonefield": "^4",
+        "lekoala/silverstripe-uuid": "^1"
     },
-    "require-dev": {
-        "silvercommerce/catalogue-admin": "^1.3",
-        "silvercommerce/tax-admin": "1.*@dev",
-        "silvercommerce/stock": "1.*@dev",
-        "i-lateral/silverstripe-gridfield-addons":"2.*@dev",
-        "phpunit/phpunit": "^9.5",
-        "squizlabs/php_codesniffer": "^3.0"
-    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/bigfork/silvercommerce-settings"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/bigfork/silvercommerce-tax-admin"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/bigfork/silvercommerce-contact-admin"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/bigfork/silvercommerce-versionhistoryfield"
+        }
+    ],
     "extra": {
         "expose": [
             "client/dist"
