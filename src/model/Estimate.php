@@ -80,7 +80,7 @@ class Estimate extends DataObject implements PermissionProvider
         'Surname'           => 'Varchar',
         'Email'             => 'Varchar',
         'PhoneNumber'       => 'Varchar',
-        
+
         // Billing Address
         'Address1'          => 'Varchar',
         'Address2'          => 'Varchar',
@@ -88,7 +88,7 @@ class Estimate extends DataObject implements PermissionProvider
         'County'            => 'Varchar',
         'PostCode'          => 'Varchar',
         'Country'           => 'Varchar',
-        
+
         // Delivery Details
         'DeliveryCompany'   => 'Varchar',
         'DeliveryFirstName' => 'Varchar',
@@ -495,7 +495,7 @@ class Estimate extends DataObject implements PermissionProvider
         }
 
         $this->extend("updateTotalWeight", $total);
-        
+
         return $total;
     }
 
@@ -512,7 +512,7 @@ class Estimate extends DataObject implements PermissionProvider
         foreach ($this->Items() as $item) {
             $total += $item->SubTotal;
         }
-        
+
         $this->extend("updateSubTotal", $total);
 
         return $total;
@@ -527,7 +527,7 @@ class Estimate extends DataObject implements PermissionProvider
     {
         $total = 0;
         $items = $this->Items();
-        
+
         // Calculate total from items in the list
         // We round here
         foreach ($items as $item) {
@@ -585,7 +585,7 @@ class Estimate extends DataObject implements PermissionProvider
         $total = $this->SubTotal + $this->TaxTotal;
 
         $this->extend("updateTotal", $total);
-        
+
         return $total;
     }
 
@@ -650,7 +650,7 @@ class Estimate extends DataObject implements PermissionProvider
     public function getItemSummaryHTML()
     {
         $html = nl2br($this->ItemSummary);
-        
+
         $this->extend("updateItemSummaryHTML", $html);
 
         return $html;
@@ -669,7 +669,7 @@ class Estimate extends DataObject implements PermissionProvider
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -685,7 +685,7 @@ class Estimate extends DataObject implements PermissionProvider
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -697,7 +697,7 @@ class Estimate extends DataObject implements PermissionProvider
     public function getCMSFields()
     {
         $self = $this;
-   
+
         $this->beforeUpdateCMSFields(function ($fields) use ($self) {
             $fields->removeByName("StartDate");
             $fields->removeByName("CustomerID");
@@ -707,7 +707,7 @@ class Estimate extends DataObject implements PermissionProvider
             $fields->removeByName("AccessKey");
             $fields->removeByName("Items");
             $fields->removeByName("Prefix");
-            
+
             $fields->addFieldsToTab(
                 "Root.Main",
                 [
@@ -732,7 +732,7 @@ class Estimate extends DataObject implements PermissionProvider
                         "ItemsDivider",
                         '<div class="field form-group"></div>'
                     ),
-                    
+
                     // Totals and settings
                     CompositeField::create(
                         CompositeField::create(
@@ -817,14 +817,14 @@ class Estimate extends DataObject implements PermissionProvider
                     $self
                 )->addExtraClass("stacked")
             );
-            
+
             $root = $fields->findOrMakeTab("Root");
 
             if ($root) {
                 $root->addextraClass('orders-root');
             }
         });
-        
+
         return parent::getCMSFields();
     }
 
@@ -990,7 +990,7 @@ class Estimate extends DataObject implements PermissionProvider
         $existing = Estimate::get()
             ->filter("AccessKey", $this->AccessKey)
             ->first();
-        
+
         return !($existing);
     }
 
@@ -1002,10 +1002,10 @@ class Estimate extends DataObject implements PermissionProvider
      * @param array|null|false $relations List of relations to duplicate.
      * @return DataObject A duplicate of this node. The exact type will be the type of this node.
      */
-    public function duplicate($doWrite = true, $relations = null)
+    public function duplicate($doWrite = true, ?array $relations = null): static
     {
         $clone = parent::duplicate($doWrite, $relations);
-        
+
         // Set up items
         if ($doWrite) {
             $clone->Ref = "";
@@ -1020,9 +1020,9 @@ class Estimate extends DataObject implements PermissionProvider
                 $clone_item->write();
             }
         }
-        
+
         $clone->invokeWithExtensions('onAfterDuplicate', $this, $doWrite);
-        
+
         return $clone;
     }
 
@@ -1033,7 +1033,7 @@ class Estimate extends DataObject implements PermissionProvider
         // Ensure that this object has a non-conflicting Access Key
         if (!$this->AccessKey) {
             $this->AccessKey = $this->generateRandomString(40);
-            
+
             while (!$this->validAccessKey()) {
                 $this->AccessKey = $this->generateRandomString(40);
             }
@@ -1110,7 +1110,7 @@ class Estimate extends DataObject implements PermissionProvider
     public function onBeforeDelete()
     {
         parent::onBeforeDelete();
-        
+
         // Delete all items attached to this order
         foreach ($this->Items() as $item) {
             $item->delete();
@@ -1155,7 +1155,7 @@ class Estimate extends DataObject implements PermissionProvider
     public function canView($member = null)
     {
         $extended = $this->extendedCan(__FUNCTION__, $member);
-        
+
         if ($extended !== null) {
             return $extended;
         }
@@ -1179,7 +1179,7 @@ class Estimate extends DataObject implements PermissionProvider
     public function canCreate($member = null, $context = [])
     {
         $extended = $this->extendedCan(__FUNCTION__, $member, $context);
-        
+
         if ($extended !== null) {
             return $extended;
         }
@@ -1187,7 +1187,7 @@ class Estimate extends DataObject implements PermissionProvider
         if (!$member) {
             $member = Member::currentUser();
         }
-        
+
         if ($member && Permission::checkMember($member->ID, ["ADMIN", "ORDERS_CREATE_ESTIMATES"])) {
             return true;
         }
@@ -1203,7 +1203,7 @@ class Estimate extends DataObject implements PermissionProvider
     public function canEdit($member = null)
     {
         $extended = $this->extendedCan(__FUNCTION__, $member);
-        
+
         if ($extended !== null) {
             return $extended;
         }
@@ -1227,7 +1227,7 @@ class Estimate extends DataObject implements PermissionProvider
     public function canDelete($member = null)
     {
         $extended = $this->extendedCan(__FUNCTION__, $member);
-        
+
         if ($extended !== null) {
             return $extended;
         }
