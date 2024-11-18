@@ -8,6 +8,7 @@ use SilverStripe\Security\Permission;
 use SilverStripe\Control\Controller;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\DropdownField;
+use SilverStripe\Security\Security;
 use SilverStripe\SiteConfig\SiteConfig;
 use SilverCommerce\OrdersAdmin\Control\DisplayController;
 use SilverStripe\Forms\TextField;
@@ -199,7 +200,7 @@ class Invoice extends Estimate implements PermissionProvider
      * @config
      */
     private static $dispatched_status = "dispatched";
-    
+
     /**
      * The status which an order has been marked collected
      * (meaning goods collected from store).
@@ -471,7 +472,7 @@ class Invoice extends Estimate implements PermissionProvider
         $this->Status = $this->config()->get("collected_status");
         return $this;
     }
-    
+
     /**
      * @depreciated This method is depreciated
      *
@@ -481,7 +482,7 @@ class Invoice extends Estimate implements PermissionProvider
     {
         return $this->getPrefix();
     }
-    
+
     /**
      * Retrieve an order prefix from siteconfig
      * for an Invoice
@@ -501,7 +502,7 @@ class Invoice extends Estimate implements PermissionProvider
     public function onBeforeWrite()
     {
         parent::onBeforeWrite();
-        
+
         if (!$this->Status) {
             $this->Status = $this->config()->get("default_status");
         }
@@ -573,13 +574,13 @@ class Invoice extends Estimate implements PermissionProvider
     public function canView($member = null)
     {
         $extended = $this->extendedCan(__FUNCTION__, $member);
-        
+
         if ($extended !== null) {
             return $extended;
         }
 
         if (!$member) {
-            $member = Member::currentUser();
+            $member = Security::getCurrentUser();
         }
 
         if ($member && Permission::checkMember($member->ID, ["ADMIN", "ORDERS_VIEW_INVOICES"])) {
@@ -597,15 +598,15 @@ class Invoice extends Estimate implements PermissionProvider
     public function canCreate($member = null, $context = [])
     {
         $extended = $this->extendedCan(__FUNCTION__, $member, $context);
-        
+
         if ($extended !== null) {
             return $extended;
         }
 
         if (!$member) {
-            $member = Member::currentUser();
+            $member = Security::getCurrentUser();
         }
-        
+
         if ($member && Permission::checkMember($member->ID, ["ADMIN", "ORDERS_CREATE_INVOICES"])) {
             return true;
         }
@@ -621,13 +622,13 @@ class Invoice extends Estimate implements PermissionProvider
     public function canEdit($member = null)
     {
         $extended = $this->extendedCan(__FUNCTION__, $member);
-        
+
         if ($extended !== null) {
             return $extended;
         }
 
         if (!$member) {
-            $member = Member::currentUser();
+            $member = Security::getCurrentUser();
         }
 
         if ($member &&
@@ -648,13 +649,13 @@ class Invoice extends Estimate implements PermissionProvider
     public function canChangeStatus($member = null)
     {
         $extended = $this->extendedCan(__FUNCTION__, $member);
-        
+
         if ($extended !== null) {
             return $extended;
         }
 
         if (!$member) {
-            $member = Member::currentUser();
+            $member = Security::getCurrentUser();
         }
 
         if ($member && Permission::checkMember($member->ID, ["ADMIN", "ORDERS_STATUS_INVOICES"])) {
@@ -672,13 +673,13 @@ class Invoice extends Estimate implements PermissionProvider
     public function canDelete($member = null)
     {
         $extended = $this->extendedCan(__FUNCTION__, $member);
-        
+
         if ($extended !== null) {
             return $extended;
         }
 
         if (!$member) {
-            $member = Member::currentUser();
+            $member = Security::getCurrentUser();
         }
 
         if ($member && Permission::checkMember($member->ID, ["ADMIN", "ORDERS_DELETE_INVOICES"])) {
