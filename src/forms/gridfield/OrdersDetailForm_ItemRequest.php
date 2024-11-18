@@ -30,7 +30,7 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
         'view',
         'ItemEditForm'
     ];
-    
+
     public function edit($request)
     {
         $controller = $this->getToplevelController();
@@ -47,11 +47,11 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
             }
 
             $this->record->write();
-            
+
             $controller
                 ->getRequest()
                 ->addHeader('X-Pjax', 'Content');
-            
+
             return $controller->redirect($this->Link("edit"));
         }
 
@@ -59,7 +59,7 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
             'Backlink' => $controller->hasMethod('Backlink') ? $controller->Backlink() : $controller->Link(),
             'ItemEditForm' => $form,
         ])->renderWith($this->getTemplates());
-        
+
         if ($request->isAjax()) {
             return $return;
         } else {
@@ -77,7 +77,7 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
         $fields = $form->Fields();
         $actions = $form->Actions();
         $record = $this->record;
-        $member = Member::currentUser();
+        $member = Security::getCurrentUser();
 
         $can_view = $this->record->canView();
         $can_edit = $this->record->canEdit();
@@ -133,7 +133,7 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
                     null,
                     $record->config()->statuses
                 );
-                
+
                 // Set default status if we can
                 if (!$record->Status && !$record->config()->default_status) {
                     $status_field
@@ -142,10 +142,10 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
                     $status_field
                         ->setValue($record->Status);
                 }
-                
+
                 $fields->replaceField("Status", $status_field);
             }
-            
+
             // Is user cannot edit, but can change status, add change
             // status button
             if ($record->ID && !$can_edit && $can_change_status) {
@@ -165,11 +165,11 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
                 _t('OrdersAdmin.Duplicate', 'Duplicate')
             )->setUseButtonTag(true)
             ->addExtraClass('btn-outline-primary  btn-hide-outline font-icon-switch');
-            
+
             if ($actions->find("Name", "action_doSave")) {
                 $actions->insertAfter($duplicate_button, "action_doSave");
             }
-            
+
             if ($actions->find("Name", "action_doChangeStatus")) {
                 $actions->insertAfter($duplicate_button, "action_doChangeStatus");
             }
@@ -177,15 +177,15 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
             $html = '<a href="' . $record->DisplayLink() . '" ';
             $html .= 'target="_blank" class="btn btn-outline-primary  btn-hide-outline font-icon-eye"';
             $html .= '>' . _t('OrdersAdmin.View', 'View') . '</a>';
-            
+
             $view_field = LiteralField::create('ViewButton', $html);
 
             $html = '<a href="' . $record->PDFLink() . '" ';
             $html .= 'target="_blank" class="btn btn-outline-primary  btn-hide-outline font-icon-down-circled"';
             $html .= '>' . _t('OrdersAdmin.Download', 'Download') . '</a>';
-            
+
             $download_field = LiteralField::create('DownloadButton', $html);
-            
+
             $actions->push($view_field, "action_doSave");
             $actions->push($download_field, "action_doSave");
         }
@@ -199,7 +199,7 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
 
         return $form;
     }
-    
+
     public function doDuplicate($data, $form)
     {
         $record = $this->record;
@@ -209,11 +209,11 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
         }
 
         $form->saveInto($record);
-        
+
         $record->write();
-        
+
         $new_record = $record->duplicate();
-        
+
         $this->gridField->getList()->add($new_record);
 
         $message = sprintf(
@@ -221,7 +221,7 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
             $this->record->singular_name(),
             '"'.Convert::raw2xml($this->record->Title).'"'
         );
-        
+
         $toplevelController = $this->getToplevelController();
         if ($toplevelController && $toplevelController instanceof LeftAndMain) {
             $backForm = $toplevelController->getEditForm();
@@ -229,13 +229,13 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
         } else {
             $form->sessionMessage($message, 'good', ValidationResult::CAST_HTML);
         }
-        
+
         $toplevelController = $this->getToplevelController();
         $toplevelController->getRequest()->addHeader('X-Pjax', 'Content');
 
         return $toplevelController->redirect($this->getBacklink(), 302);
     }
-    
+
     public function doConvert($data, $form)
     {
         $record = $this->record;
@@ -245,10 +245,10 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
         }
 
         $form->saveInto($record);
-        
+
         $record = $record->convertToInvoice();
         $this->record = $record;
-        
+
         $this->gridField->getList()->add($record);
 
         $message = sprintf(
@@ -256,7 +256,7 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
             $this->record->singular_name(),
             '"'.Convert::raw2xml($this->record->Title).'"'
         );
-        
+
         $toplevelController = $this->getToplevelController();
         if ($toplevelController && $toplevelController instanceof LeftAndMain) {
             $backForm = $toplevelController->getEditForm();
@@ -264,13 +264,13 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
         } else {
             $form->sessionMessage($message, 'good', ValidationResult::CAST_HTML);
         }
-        
+
         $toplevelController = $this->getToplevelController();
         $toplevelController->getRequest()->addHeader('X-Pjax', 'Content');
 
         return $toplevelController->redirect($this->getBacklink(), 302);
     }
-    
+
     public function doChangeStatus($data, $form)
     {
         $new_record = $this->record->ID == 0;
@@ -282,7 +282,7 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
             $this->record->write();
         } catch (ValidationException $e) {
             $form->sessionMessage($e->getResult()->message(), 'bad', ValidationResult::CAST_HTML);
-            
+
             $responseNegotiator = new PjaxResponseNegotiator([
                 'CurrentForm' => function () use (&$form) {
                     return $form->forTemplate();
@@ -291,11 +291,11 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
                     return $controller->redirectBack();
                 }
             ]);
-            
+
             if ($controller->getRequest()->isAjax()) {
                 $controller->getRequest()->addHeader('X-Pjax', 'CurrentForm');
             }
-            
+
             return $responseNegotiator->respond($controller->getRequest());
         }
 
@@ -311,7 +311,7 @@ class OrdersDetailForm_ItemRequest extends VersionedGridFieldItemRequest
                 'link' => $link
             ]
         );
-        
+
         $form->sessionMessage($message, 'good', ValidationResult::CAST_HTML);
 
         if ($this->gridField->getList()->byId($this->record->ID)) {
